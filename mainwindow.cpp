@@ -135,7 +135,7 @@ void MainWindow::readLastFM(const QDomDocument &doc) const {
 			qDebug() << "photoView->addPhoto: " << artist_image_url;
 		}
 
-		if(i == 5) {
+		if(i == 14) {
 		  break; // stop after 5 for now
 		}
 
