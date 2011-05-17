@@ -15,7 +15,7 @@
 #include <QtXml/QDomDocument>
 #include <QtXml/QDomNodeList>
 #include <QtWebKit/QWebView>
-#include "exif.h"
+//#include "exif.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -170,7 +170,7 @@ void MainWindow::initializeDB()
 
 void MainWindow::updateDB()
 {
-
+/*
   Exif::Tags tags(currentFile);
   QByteArray cTags;
   int now = QDateTime::currentDateTime().toTime_t();
@@ -201,8 +201,10 @@ void MainWindow::updateDB()
     }
 
     query.bindValue(":timestamp",now);
-    query.bindValue(":url",engines.at(currentEngineIndex)->photoUrl());
-    query.bindValue(":engine",engines.at(currentEngineIndex)->name());
+    //query.bindValue(":url",engines.at(currentEngineIndex)->photoUrl());
+    query.bindValue(":url", ""); // if needed pass it through currentPhotoInfo or something
+    //query.bindValue(":engine",engines.at(currentEngineIndex)->name());
+    query.bindValue(":engine", "LastFM"); // for now just using LastFM
     query.bindValue(":tags",currentPhotoInfo.searchString.toLower());
     query.bindValue(":title",currentPhotoInfo.title);
     query.bindValue(":owner",currentPhotoInfo.owner);
@@ -237,6 +239,7 @@ void MainWindow::updateDB()
       qDebug() << "Application::updateDB() insert error:" << query.lastError().text();
     }
   }
+*/
 }
 
 void MainWindow::clearHistory()

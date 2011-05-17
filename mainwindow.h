@@ -10,6 +10,16 @@
 #include <QtWebKit/QWebView>
 #include <QtSql>
 
+struct PhotoInfo
+{
+  QString owner;
+  QString title;
+  QString description;
+  QString location;
+  QUrl sourceUrl;
+  QString searchString;
+};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -35,8 +45,13 @@ private:
     void updateDBVersion();
     void updateDB();
     void cleanHistory(int now, int timeBack, int timeBackFactor);
+    void clearHistory();
 
     QString _tempStorageDir;
+
+    QSize currentPhotoSize;
+    QFileInfo currentFile;
+    PhotoInfo currentPhotoInfo;
 
 };
 
