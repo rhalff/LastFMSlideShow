@@ -113,7 +113,7 @@ namespace Exif
     InfoDialog(const QByteArray &data, QWidget *parent = 0);
     virtual ~InfoDialog() { }
   };
-}
 */
+}
 
 #endif
