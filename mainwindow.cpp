@@ -36,7 +36,7 @@ MainWindow::MainWindow(QString &artist, QWidget *parent) : QMainWindow(parent)
     manager = new QNetworkAccessManager(this);
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
 
-    artist = (artist == "") ? "cher" : artist;
+    artist = (artist == "") ? "Jimi Hendrix" : artist;
     QString rss_url = "http://ws.audioscrobbler.com/2.0/?method=artist.getImages&api_key=2978eaa78e3d2cc0e6033ec16ac41395&artist=" + artist;
 
     reply = manager->get(QNetworkRequest(QUrl(rss_url)));
