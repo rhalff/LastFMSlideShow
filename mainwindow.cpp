@@ -92,12 +92,9 @@ void MainWindow::readLastFM(const QDomDocument &doc) const {
 	QDomElement docElem = doc.documentElement();
 	QDomNodeList nodeList = docElem.elementsByTagName("sizes");
 
-	// for now just try to get one 
-	QString artist_image_url = "http://userserve-ak.last.fm/serve/_/62291231/Cher++Goddess+of+Pop.png";
+	QString artist_image_url = "";
 
 	qDebug() << "readRSS";
-
-	photoView->addPhoto ( artist_image_url );
 
 	for (uint i = 0; i < nodeList.length(); i++)
 	{
@@ -144,8 +141,6 @@ void MainWindow::readLastFM(const QDomDocument &doc) const {
 
 
 	}
-
-//	wv->load(QUrl(artist_image_url));
 
 }
 
