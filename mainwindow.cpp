@@ -14,8 +14,8 @@
 #include <QProgressBar>
 #include <QtXml/QDomDocument>
 #include <QtXml/QDomNodeList>
-#include <QtWebKit/QWebView>
 //#include "exif.h"
+#include "photo.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -23,14 +23,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     progress = new QProgressBar;
     statusBar()->addPermanentWidget(progress);
 
-    /* Web-view to display articles. */
-    wv = new QWebView;
-    wv->load(QUrl("about:blank"));
-    connect(wv, SIGNAL(loadProgress(int)), progress, SLOT(setValue(int)));
+    photoView = new PhotoView();
+// TODO: reimplement this getmore function 
+//    connect ( photoView,SIGNAL ( giveMeMore(int) ),this,SLOT ( getPhotos(int) ) );
+    this->setCentralWidget ( photoView );
 
-    //QSplitter * splitter = new QSplitter;
-    //splitter->addWidget(wv);
-    this->setCentralWidget(wv);
+//    getPhotos(MAX_PHOTOS);
 
     /* Set up the network manager. */
     manager = new QNetworkAccessManager(this);
@@ -78,7 +76,9 @@ void MainWindow::replyFinished(QNetworkReply * netReply)
         QDomDocument doc;
         QString error;
         if (!doc.setContent(str, false, &error)) {
-            wv->setHtml(QString("<h1>Error</h1>") + error);
+		// report an error somewhere..
+            //wv->setHtml(QString("<h1>Error</h1>") + error);
+		qDebug() << error; 
         } else {
 	    readLastFM(doc);
         }
@@ -95,39 +95,56 @@ void MainWindow::readLastFM(const QDomDocument &doc) const {
 
 	qDebug() << "readRSS";
 
+	photoView->addPhoto ( artist_image_url );
+
 	for (uint i = 0; i < nodeList.length(); i++)
 	{
 		QDomNode node = nodeList.item(i);
 		QDomElement e = node.toElement();
 
 		QDomNodeList sizeList = e.elementsByTagName("size");
-		for (uint j = 0; j < sizeList.length(); j++) {
 
-			QDomNode sizeNode  = sizeList.item(j);
-			QDomElement sizeEl = sizeNode.toElement();
+		if(!sizeList.length()) {
+			qDebug() << "No photos found";
+		} else {
+			qDebug() << "Found some photo's";
+			for (uint j = 0; j < sizeList.length(); j++) {
 
-			// qDebug() << sizeEl.attribute("name");
+				QDomNode sizeNode  = sizeList.item(j);
+				QDomElement sizeEl = sizeNode.toElement();
 
-			// try to get a nice high res photo of our favorite artist
-			if(sizeEl.attribute("name") == "original") {
-				artist_image_url = sizeEl.text();
-				break;
-			}
+				qDebug() << sizeEl.attribute("name");
 
-			// backup plan, extralarge images are rather small though.. 252x250
-			if(sizeEl.attribute("name") == "extralarge") {
-				artist_image_url = sizeEl.text();
-				break;
+				// try to get a nice high res photo of our favorite artist
+				if(sizeEl.attribute("name") == "original") {
+					qDebug() << "Found an highres original! yeay";
+					artist_image_url = sizeEl.text();
+					break;
+				} 
+
+				// backup plan, extralarge images are rather small though.. 252x250
+				if(sizeEl.attribute("name") == "extralarge") {
+					artist_image_url = sizeEl.text();
+					break;
+				}
+
 			}
 
 			// more tiny is useless.
+			photoView->addPhoto ( artist_image_url );
+
+			qDebug() << "photoView->addPhoto: " << artist_image_url;
 		}
 
-		qDebug() << "artist_image_url: " << artist_image_url;
+		if(i == 5) {
+		  break; // stop after 5 for now
+		}
+
 
 	}
 
-	wv->load(QUrl(artist_image_url));
+//	wv->load(QUrl(artist_image_url));
+
 }
 
 void MainWindow::initializeDB()

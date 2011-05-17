@@ -7,7 +7,6 @@
 #include <QProgressBar>
 #include <QtGui/QMainWindow>
 #include <QtNetwork/QNetworkReply>
-#include <QtWebKit/QWebView>
 #include <QtSql>
 
 struct PhotoInfo
@@ -19,6 +18,8 @@ struct PhotoInfo
   QUrl sourceUrl;
   QString searchString;
 };
+
+class PhotoView;
 
 class MainWindow : public QMainWindow
 {
@@ -34,7 +35,6 @@ public slots:
     QString tempStorageDir() const { return _tempStorageDir; }
 
 private:
-    QWebView * wv;
     QNetworkAccessManager *manager;
     QNetworkReply * reply;
     QProgressBar * progress;
@@ -52,6 +52,8 @@ private:
     QSize currentPhotoSize;
     QFileInfo currentFile;
     PhotoInfo currentPhotoInfo;
+
+    PhotoView *photoView;
 
 };
 
