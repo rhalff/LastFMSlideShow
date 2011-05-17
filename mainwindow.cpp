@@ -1,15 +1,6 @@
 #include "mainwindow.h"
 #include <QApplication>
-#include <QToolBar>
-#include <QComboBox>
-#include <QAction>
-#include <QSplitter>
-#include <QListView>
 #include <QDebug>
-#include <QMessageBox>
-#include <QStandardItemModel>
-#include <QSettings>
-#include <QKeyEvent>
 #include <QStatusBar>
 #include <QProgressBar>
 #include <QtXml/QDomDocument>
