@@ -17,7 +17,7 @@
 //#include "exif.h"
 #include "photo.h"
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
+MainWindow::MainWindow(QString &artist, QWidget *parent) : QMainWindow(parent)
 {
     /* Progress bar to signal progress of RSS feed download and web page load. */
     progress = new QProgressBar;
@@ -36,7 +36,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     manager = new QNetworkAccessManager(this);
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
 
-    QString artist = "cher";
+    artist = (artist == "") ? "cher" : artist;
     QString rss_url = "http://ws.audioscrobbler.com/2.0/?method=artist.getImages&api_key=2978eaa78e3d2cc0e6033ec16ac41395&artist=" + artist;
 
     reply = manager->get(QNetworkRequest(QUrl(rss_url)));
