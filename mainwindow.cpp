@@ -28,6 +28,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 //    connect ( photoView,SIGNAL ( giveMeMore(int) ),this,SLOT ( getPhotos(int) ) );
     this->setCentralWidget ( photoView );
 
+    resize(800,600);
+
 //    getPhotos(MAX_PHOTOS);
 
     /* Set up the network manager. */
