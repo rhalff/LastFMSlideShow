@@ -6,6 +6,7 @@
 #include <QtXml/QDomDocument>
 #include <QtXml/QDomNodeList>
 #include "photo.h"
+#include "defs.h"
 
 MainWindow::MainWindow(QString &artist, QWidget *parent) : QMainWindow(parent)
 {
@@ -69,7 +70,7 @@ void MainWindow::fetchPhotos(const QString &artist) {
     // check DB for photos
 
     // otherwise get it from lastFM
-    QString rss_url = "http://ws.audioscrobbler.com/2.0/?method=artist.getImages&api_key=2978eaa78e3d2cc0e6033ec16ac41395&artist=" + artist;
+    QString rss_url = "http://ws.audioscrobbler.com/2.0/?method=artist.getImages&api_key=" LASTFM_API_KEY "&artist=" + artist;
 
     reply = manager->get(QNetworkRequest(QUrl(rss_url)));
     connect(reply, SIGNAL(downloadProgress(qint64,qint64)), this, SLOT(downloadProgress(qint64,qint64)));

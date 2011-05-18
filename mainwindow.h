@@ -8,7 +8,6 @@
 #include <QtGui/QMainWindow>
 #include <QtNetwork/QNetworkReply>
 #include <QtSql>
-#include "defs.h"
 
 struct PhotoInfo
 {
@@ -51,7 +50,6 @@ private:
     void prepareHomeDir();
 
     QString _tempStorageDir;
-
     QSize currentPhotoSize;
     QFileInfo currentFile;
     PhotoInfo currentPhotoInfo;
