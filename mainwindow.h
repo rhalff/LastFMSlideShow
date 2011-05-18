@@ -48,6 +48,7 @@ private:
     void cleanHistory(int now, int timeBack, int timeBackFactor);
     void clearHistory();
     void fetchPhotos(const QString &artist);
+    void prepareHomeDir();
 
     QString _tempStorageDir;
 

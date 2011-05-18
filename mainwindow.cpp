@@ -10,13 +10,7 @@
 MainWindow::MainWindow(QString &artist, QWidget *parent) : QMainWindow(parent)
 {
 
-#ifdef Q_WS_X11
-  QDir(QDir::homePath()).mkdir(TEMP_PATH);
-  _tempStorageDir = QDir::homePath() + "/" + TEMP_PATH;
-#else
-  QDir::home().root().mkpath(QDesktopServices::storageLocation(QDesktopServices::DataLocation));
-  _tempStorageDir = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
-#endif
+    prepareHomeDir();
 
     /* Progress bar to signal progress of RSS feed download and web page load. */
     progress = new QProgressBar;
@@ -42,6 +36,19 @@ MainWindow::MainWindow(QString &artist, QWidget *parent) : QMainWindow(parent)
 
 MainWindow::~MainWindow()
 {
+}
+
+void MainWindow::prepareHomeDir()
+{
+
+#ifdef Q_WS_X11
+  QDir(QDir::homePath()).mkdir(TEMP_PATH);
+  _tempStorageDir = QDir::homePath() + "/" + TEMP_PATH;
+#else
+  QDir::home().root().mkpath(QDesktopServices::storageLocation(QDesktopServices::DataLocation));
+  _tempStorageDir = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+#endif
+
 }
 
 void MainWindow::downloadProgress(qint64 bytes, qint64 bytesTotal)
