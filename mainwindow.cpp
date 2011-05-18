@@ -5,11 +5,19 @@
 #include <QProgressBar>
 #include <QtXml/QDomDocument>
 #include <QtXml/QDomNodeList>
-//#include "exif.h"
 #include "photo.h"
 
 MainWindow::MainWindow(QString &artist, QWidget *parent) : QMainWindow(parent)
 {
+
+#ifdef Q_WS_X11
+  QDir(QDir::homePath()).mkdir(TEMP_PATH);
+  _tempStorageDir = QDir::homePath() + "/" + TEMP_PATH;
+#else
+  QDir::home().root().mkpath(QDesktopServices::storageLocation(QDesktopServices::DataLocation));
+  _tempStorageDir = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+#endif
+
     /* Progress bar to signal progress of RSS feed download and web page load. */
     progress = new QProgressBar;
     statusBar()->addPermanentWidget(progress);
@@ -28,10 +36,8 @@ MainWindow::MainWindow(QString &artist, QWidget *parent) : QMainWindow(parent)
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
 
     artist = (artist == "") ? "Jimi Hendrix" : artist;
-    QString rss_url = "http://ws.audioscrobbler.com/2.0/?method=artist.getImages&api_key=2978eaa78e3d2cc0e6033ec16ac41395&artist=" + artist;
 
-    reply = manager->get(QNetworkRequest(QUrl(rss_url)));
-    connect(reply, SIGNAL(downloadProgress(qint64,qint64)), this, SLOT(downloadProgress(qint64,qint64)));
+    fetchPhotos(artist);
 }
 
 MainWindow::~MainWindow()
@@ -49,6 +55,18 @@ void MainWindow::downloadProgress(qint64 bytes, qint64 bytesTotal)
         int percent = bytes * 100 / bytesTotal;
         progress->setValue(percent);
     }
+}
+
+void MainWindow::fetchPhotos(const QString &artist) {
+
+    // check DB for photos
+
+    // otherwise get it from lastFM
+    QString rss_url = "http://ws.audioscrobbler.com/2.0/?method=artist.getImages&api_key=2978eaa78e3d2cc0e6033ec16ac41395&artist=" + artist;
+
+    reply = manager->get(QNetworkRequest(QUrl(rss_url)));
+    connect(reply, SIGNAL(downloadProgress(qint64,qint64)), this, SLOT(downloadProgress(qint64,qint64)));
+
 }
 
 void MainWindow::replyFinished(QNetworkReply * netReply)
@@ -73,6 +91,8 @@ void MainWindow::replyFinished(QNetworkReply * netReply)
             //wv->setHtml(QString("<h1>Error</h1>") + error);
 		qDebug() << error; 
         } else {
+
+	    // check the db first
 	    readLastFM(doc);
         }
     }
@@ -130,7 +150,6 @@ void MainWindow::readLastFM(const QDomDocument &doc) const {
 		  break; // stop after 5 for now
 		}
 
-
 	}
 
 }
@@ -149,21 +168,10 @@ void MainWindow::initializeDB()
 
     if (query.exec("select * from sqlite_master where name = 'photoHistory'"))
     {
-      if (!query.next() &&
-          (!query.exec(QString("create table photoHistory (") +
-                      "  timestamp integer primary key, " +
-                      "  url text, " +
-                      "  engine text, " +
-                      "  tags text default 'unknown', " +
-                      "  title text, " +
-                      "  owner text, " +
-                      "  description text, " +
-                      "  location text, " +
-                      "  sourceUrl text, " +
-                      "  size integer, " +
-                      "  width integer, " +
-                      "  height integer, " +
-                      "  exif blob default null)"))) {
+
+      QString createTable = "create table photoHistory (timestamp integer primary key, url text, artist text, title text, description text, location text, sourceUrl text, width integer,height integer)";
+
+      if (!query.next() && (!query.exec(createTable))) {
         db.close();
         qDebug() << "Application::Application() cannot create photoHistory table";
       }
@@ -175,8 +183,7 @@ void MainWindow::initializeDB()
 
 void MainWindow::updateDB()
 {
-/*
-  Exif::Tags tags(currentFile);
+
   QByteArray cTags;
   int now = QDateTime::currentDateTime().toTime_t();
 
@@ -193,24 +200,13 @@ void MainWindow::updateDB()
 
     QSqlQuery query(db);
 
-    if (tags.size()) {
-      query.prepare(QString("insert into photoHistory (timestamp, url, engine, tags, title, owner, ") +
-                    "description, location, sourceUrl, size, width, height, exif) values (" +
-                    ":timestamp, :url, :engine, :tags, :title, :owner, " +
-                    ":description, :location, :sourceUrl, :size, :width, :height, :exif)");
-    } else {
-      query.prepare(QString("insert into photoHistory (timestamp, url, engine, tags, title, owner, ") +
-                    "description, location, sourceUrl, size, width, height, exif) values (" +
-                    ":timestamp, :url, :engine, :tags, :title, :owner, " +
-                    ":description, :location, :sourceUrl, :size, :width, :height, null)");
-    }
+    QString insert = "insert into photoHistory (timestamp, url, artist, title, description, location, sourceUrl, width, height) values (:timestamp, :url, :title, :description, :location, :sourceUrl, :width, :height)";
+
+    query.prepare(insert);
 
     query.bindValue(":timestamp",now);
-    //query.bindValue(":url",engines.at(currentEngineIndex)->photoUrl());
     query.bindValue(":url", ""); // if needed pass it through currentPhotoInfo or something
-    //query.bindValue(":engine",engines.at(currentEngineIndex)->name());
-    query.bindValue(":engine", "LastFM"); // for now just using LastFM
-    query.bindValue(":tags",currentPhotoInfo.searchString.toLower());
+    query.bindValue(":artist",currentPhotoInfo.searchString.toLower());
     query.bindValue(":title",currentPhotoInfo.title);
     query.bindValue(":owner",currentPhotoInfo.owner);
     query.bindValue(":description",currentPhotoInfo.description);
@@ -219,11 +215,6 @@ void MainWindow::updateDB()
     query.bindValue(":size",currentFile.size());
     query.bindValue(":width",currentPhotoSize.width());
     query.bindValue(":height",currentPhotoSize.height());
-
-    if (tags.size()) {
-      cTags = qCompress(tags.data());
-      query.bindValue(":exif",cTags,QSql::Binary | QSql::In);
-    }
 
     if (query.exec()) {
       QImage thumb(currentFile.absoluteFilePath());
@@ -235,16 +226,11 @@ void MainWindow::updateDB()
       }
 
       // TODO: create dirs based on artist name
-
-      // Automatically rotate
-      thumb = Exif::Tags(currentFile).normalize(thumb);
-
       thumb.save(_tempStorageDir + "/thumbs/" + QString::number(now) + ".png","png");
     } else {
       qDebug() << "Application::updateDB() insert error:" << query.lastError().text();
     }
   }
-*/
 }
 
 void MainWindow::clearHistory()

@@ -8,6 +8,7 @@
 #include <QtGui/QMainWindow>
 #include <QtNetwork/QNetworkReply>
 #include <QtSql>
+#include "defs.h"
 
 struct PhotoInfo
 {
@@ -46,6 +47,7 @@ private:
     void updateDB();
     void cleanHistory(int now, int timeBack, int timeBackFactor);
     void clearHistory();
+    void fetchPhotos(const QString &artist);
 
     QString _tempStorageDir;
 
