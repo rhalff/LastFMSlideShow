@@ -5,6 +5,7 @@
 #include <QProgressBar>
 #include <QtXml/QDomDocument>
 #include <QtXml/QDomNodeList>
+#include <QKeyEvent>
 #include "photo.h"
 #include "defs.h"
 
@@ -12,6 +13,8 @@ MainWindow::MainWindow(QString &artist, QWidget *parent) : QMainWindow(parent)
 {
 
     prepareHomeDir();
+
+    resizeScreen();
 
     /* Progress bar to signal progress of RSS feed download and web page load. */
     m_progress = new QProgressBar;
@@ -37,6 +40,22 @@ MainWindow::MainWindow(QString &artist, QWidget *parent) : QMainWindow(parent)
 
 MainWindow::~MainWindow()
 {
+}
+
+void MainWindow::resizeScreen()
+{
+/*
+    QRect deskRect = QApplication::desktop()->screenGeometry(this);
+    m_deskX      = deskRect.x();
+    m_deskY      = deskRect.y();
+    m_deskWidth  = deskRect.width();
+    m_deskHeight = deskRect.height();
+    
+    move(m_deskX, m_deskY);
+    resize(m_deskWidth, m_deskHeight);
+*/
+    // TODO: set Background Color to black;
+
 }
 
 void MainWindow::prepareHomeDir()
@@ -257,6 +276,34 @@ void MainWindow::clearHistory()
   while (dirIterator.hasNext()) {
     dirIterator.next();
     QFile::remove(dirIterator.filePath());
+  }
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+  switch(event->key())
+  {
+    case Qt::Key_F11 :
+    {
+      if(m_isFullscreen) {
+	m_isFullscreen = false;
+	statusBar()->setVisible(true);
+	showNormal();
+      } else {
+        m_isFullscreen = true;
+        showFullScreen();
+	statusBar()->setVisible(false);
+      }
+    } break;
+    case Qt::Key_Escape :
+    {
+      if(m_isFullscreen) {
+	m_isFullscreen = false;
+	statusBar()->setVisible(true);
+	showNormal();
+      }
+    }
+    break;
   }
 }
 

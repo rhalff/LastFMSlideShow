@@ -34,6 +34,9 @@ public slots:
     void downloadProgress(qint64 bytes, qint64 bytesTotal);
     QString tempStorageDir() const { return m_tempStorageDir; }
 
+protected:
+    void keyPressEvent(QKeyEvent*);
+
 private:
     QNetworkAccessManager *manager;
     QNetworkReply * m_reply;
@@ -43,6 +46,12 @@ private:
     QFileInfo m_currentFile;
     PhotoInfo m_currentPhotoInfo;
     PhotoView * m_photoView;
+
+    int m_deskX;
+    int m_deskY;
+    int m_deskWidth;
+    int m_deskHeight;
+    bool m_isFullscreen;
 
     void readLastFM(const QDomDocument& doc) const;
 
@@ -54,6 +63,7 @@ private:
     void clearHistory();
     void fetchPhotos(const QString &artist);
     void prepareHomeDir();
+    void resizeScreen();
 
 };
 
