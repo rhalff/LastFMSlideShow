@@ -14,13 +14,13 @@ MainWindow::MainWindow(QString &artist, QWidget *parent) : QMainWindow(parent)
     prepareHomeDir();
 
     /* Progress bar to signal progress of RSS feed download and web page load. */
-    progress = new QProgressBar;
-    statusBar()->addPermanentWidget(progress);
+    m_progress = new QProgressBar;
+    statusBar()->addPermanentWidget(m_progress);
 
-    photoView = new PhotoView();
+    m_photoView = new PhotoView();
 // TODO: reimplement this getmore function 
-//    connect ( photoView,SIGNAL ( giveMeMore(int) ),this,SLOT ( getPhotos(int) ) );
-    this->setCentralWidget ( photoView );
+//    connect ( m_photoView,SIGNAL ( giveMeMore(int) ),this,SLOT ( getPhotos(int) ) );
+    this->setCentralWidget ( m_photoView );
 
     resize(800,600);
 
@@ -44,10 +44,10 @@ void MainWindow::prepareHomeDir()
 
 #ifdef Q_WS_X11
   QDir(QDir::homePath()).mkdir(TEMP_PATH);
-  _tempStorageDir = QDir::homePath() + "/" + TEMP_PATH;
+  m_tempStorageDir = QDir::homePath() + "/" + TEMP_PATH;
 #else
   QDir::home().root().mkpath(QDesktopServices::storageLocation(QDesktopServices::DataLocation));
-  _tempStorageDir = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+  m_tempStorageDir = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
 #endif
 
 }
@@ -56,12 +56,12 @@ void MainWindow::downloadProgress(qint64 bytes, qint64 bytesTotal)
 {
     if (bytesTotal == -1) {
         /* No total bytes available, just set the progress bar to show a busy indicator. */
-        progress->setMinimum(0);
-        progress->setMaximum(0);
+        m_progress->setMinimum(0);
+        m_progress->setMaximum(0);
     } else {
-        progress->setMaximum(100);
+        m_progress->setMaximum(100);
         int percent = bytes * 100 / bytesTotal;
-        progress->setValue(percent);
+        m_progress->setValue(percent);
     }
 }
 
@@ -72,8 +72,8 @@ void MainWindow::fetchPhotos(const QString &artist) {
     // otherwise get it from lastFM
     QString rss_url = "http://ws.audioscrobbler.com/2.0/?method=artist.getImages&api_key=" LASTFM_API_KEY "&artist=" + artist;
 
-    reply = manager->get(QNetworkRequest(QUrl(rss_url)));
-    connect(reply, SIGNAL(downloadProgress(qint64,qint64)), this, SLOT(downloadProgress(qint64,qint64)));
+    m_reply = manager->get(QNetworkRequest(QUrl(rss_url)));
+    connect(m_reply, SIGNAL(downloadProgress(qint64,qint64)), this, SLOT(downloadProgress(qint64,qint64)));
 
 }
 
@@ -84,12 +84,12 @@ void MainWindow::replyFinished(QNetworkReply * netReply)
     /* If we are redirected, try again. TODO: Limit redirection count. */
     QVariant vt = netReply->attribute(QNetworkRequest::RedirectionTargetAttribute);
 
-    delete reply;
+    delete m_reply;
 
     if (!vt.isNull()) {
         qDebug() << "Redirected to:" << vt.toUrl().toString();
-        reply = manager->get(QNetworkRequest(vt.toUrl()));
-        connect(reply, SIGNAL(downloadProgress(qint64,qint64)), this, SLOT(downloadProgress(qint64,qint64)));
+        m_reply = manager->get(QNetworkRequest(vt.toUrl()));
+        connect(m_reply, SIGNAL(downloadProgress(qint64,qint64)), this, SLOT(downloadProgress(qint64,qint64)));
     } else {
         /* We have something. */
         QDomDocument doc;
@@ -149,9 +149,9 @@ void MainWindow::readLastFM(const QDomDocument &doc) const {
 			}
 
 			// more tiny is useless.
-			photoView->addPhoto ( artist_image_url );
+			m_photoView->addPhoto ( artist_image_url );
 
-			qDebug() << "photoView->addPhoto: " << artist_image_url;
+			qDebug() << "m_photoView->addPhoto: " << artist_image_url;
 		}
 
 		if(i == 14) {
@@ -167,8 +167,8 @@ void MainWindow::initializeDB()
   qDebug() << "Application::initializeDB()";
 
   db = QSqlDatabase::addDatabase("QSQLITE");
-  QDir(_tempStorageDir).mkdir("thumbs");
-  db.setDatabaseName(_tempStorageDir + "/thumbs/LastFmSlideshow.db");
+  QDir(m_tempStorageDir).mkdir("thumbs");
+  db.setDatabaseName(m_tempStorageDir + "/thumbs/LastFmSlideshow.db");
   if (db.open()) {
     QSqlQuery query(db);
 
@@ -200,7 +200,7 @@ void MainWindow::updateDB()
   // TODO: cleanHistory reimplement later ( or not )
   //cleanHistory(now,settings.value(MAIN_SECTION).value(HISTORY_TIME_LIMIT).toInt(), settings.value(MAIN_SECTION).value(HISTORY_TIME_LIMIT_FACTOR).toInt());
 
-  if (currentPhotoInfo.searchString.isEmpty()) { return; }
+  if (m_currentPhotoInfo.searchString.isEmpty()) { return; }
 
   // TODO: reimplement history limit, in our case photoUrl is never empty at this stage
   //if (db.isOpen() && !engines.at(currentEngineIndex)->photoUrl().isEmpty() && settings.value(MAIN_SECTION).value(HISTORY_TIME_LIMIT).toInt())
@@ -213,19 +213,19 @@ void MainWindow::updateDB()
     query.prepare(insert);
 
     query.bindValue(":timestamp",now);
-    query.bindValue(":url", ""); // if needed pass it through currentPhotoInfo or something
-    query.bindValue(":artist",currentPhotoInfo.searchString.toLower());
-    query.bindValue(":title",currentPhotoInfo.title);
-    query.bindValue(":owner",currentPhotoInfo.owner);
-    query.bindValue(":description",currentPhotoInfo.description);
-    query.bindValue(":location",currentPhotoInfo.location);
-    query.bindValue(":sourceUrl",currentPhotoInfo.sourceUrl.toString());
-    query.bindValue(":size",currentFile.size());
-    query.bindValue(":width",currentPhotoSize.width());
-    query.bindValue(":height",currentPhotoSize.height());
+    query.bindValue(":url", ""); // if needed pass it through m_currentPhotoInfo or something
+    query.bindValue(":artist",m_currentPhotoInfo.searchString.toLower());
+    query.bindValue(":title",m_currentPhotoInfo.title);
+    query.bindValue(":owner",m_currentPhotoInfo.owner);
+    query.bindValue(":description",m_currentPhotoInfo.description);
+    query.bindValue(":location",m_currentPhotoInfo.location);
+    query.bindValue(":sourceUrl",m_currentPhotoInfo.sourceUrl.toString());
+    query.bindValue(":size",m_currentFile.size());
+    query.bindValue(":width",m_currentPhotoSize.width());
+    query.bindValue(":height",m_currentPhotoSize.height());
 
     if (query.exec()) {
-      QImage thumb(currentFile.absoluteFilePath());
+      QImage thumb(m_currentFile.absoluteFilePath());
 
       if (thumb.width() > thumb.height()) {
 	      thumb = thumb.scaledToWidth(100,Qt::SmoothTransformation);
@@ -234,7 +234,7 @@ void MainWindow::updateDB()
       }
 
       // TODO: create dirs based on artist name
-      thumb.save(_tempStorageDir + "/thumbs/" + QString::number(now) + ".png","png");
+      thumb.save(m_tempStorageDir + "/thumbs/" + QString::number(now) + ".png","png");
     } else {
       qDebug() << "Application::updateDB() insert error:" << query.lastError().text();
     }
@@ -244,7 +244,7 @@ void MainWindow::updateDB()
 void MainWindow::clearHistory()
 {
   QSqlQuery query(db);
-  QDirIterator dirIterator(_tempStorageDir + "/thumbs",
+  QDirIterator dirIterator(m_tempStorageDir + "/thumbs",
                            QStringList() << "*.png",
                            QDir::Files);
 

@@ -32,12 +32,18 @@ public:
 public slots:
     void replyFinished(QNetworkReply*);
     void downloadProgress(qint64 bytes, qint64 bytesTotal);
-    QString tempStorageDir() const { return _tempStorageDir; }
+    QString tempStorageDir() const { return m_tempStorageDir; }
 
 private:
     QNetworkAccessManager *manager;
-    QNetworkReply * reply;
-    QProgressBar * progress;
+    QNetworkReply * m_reply;
+    QProgressBar * m_progress;
+    QString m_tempStorageDir;
+    QSize m_currentPhotoSize;
+    QFileInfo m_currentFile;
+    PhotoInfo m_currentPhotoInfo;
+    PhotoView * m_photoView;
+
     void readLastFM(const QDomDocument& doc) const;
 
     QSqlDatabase db;
@@ -48,13 +54,6 @@ private:
     void clearHistory();
     void fetchPhotos(const QString &artist);
     void prepareHomeDir();
-
-    QString _tempStorageDir;
-    QSize currentPhotoSize;
-    QFileInfo currentFile;
-    PhotoInfo currentPhotoInfo;
-
-    PhotoView *photoView;
 
 };
 
