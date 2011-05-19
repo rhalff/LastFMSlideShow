@@ -12,6 +12,8 @@
 MainWindow::MainWindow(QString &artist, QWidget *parent) : QMainWindow(parent)
 {
 
+    m_isFullscreen = false;
+
     prepareHomeDir();
 
     resizeScreen();
