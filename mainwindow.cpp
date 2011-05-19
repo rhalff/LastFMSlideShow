@@ -13,6 +13,7 @@ MainWindow::MainWindow(QString &artist, QWidget *parent) : QMainWindow(parent)
 {
 
     m_isFullscreen = false;
+    m_artist = (artist == "") ? "Jimi Hendrix" : artist;
 
     prepareHomeDir();
 
@@ -35,9 +36,9 @@ MainWindow::MainWindow(QString &artist, QWidget *parent) : QMainWindow(parent)
     manager = new QNetworkAccessManager(this);
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
 
-    artist = (artist == "") ? "Jimi Hendrix" : artist;
+    // fetch the rss feed from last.fm
+    fetchPhotos();
 
-    fetchPhotos(artist);
 }
 
 MainWindow::~MainWindow()
@@ -86,12 +87,12 @@ void MainWindow::downloadProgress(qint64 bytes, qint64 bytesTotal)
     }
 }
 
-void MainWindow::fetchPhotos(const QString &artist) {
+void MainWindow::fetchPhotos() {
 
     // check DB for photos
 
     // otherwise get it from lastFM
-    QString rss_url = "http://ws.audioscrobbler.com/2.0/?method=artist.getImages&api_key=" LASTFM_API_KEY "&artist=" + artist;
+    QString rss_url = "http://ws.audioscrobbler.com/2.0/?method=artist.getImages&api_key=" LASTFM_API_KEY "&artist=" + m_artist;
 
     m_reply = manager->get(QNetworkRequest(QUrl(rss_url)));
     connect(m_reply, SIGNAL(downloadProgress(qint64,qint64)), this, SLOT(downloadProgress(qint64,qint64)));
@@ -104,6 +105,8 @@ void MainWindow::replyFinished(QNetworkReply * netReply)
 
     /* If we are redirected, try again. TODO: Limit redirection count. */
     QVariant vt = netReply->attribute(QNetworkRequest::RedirectionTargetAttribute);
+
+    qDebug() << "network reply finished";
 
     delete m_reply;
 
@@ -121,7 +124,9 @@ void MainWindow::replyFinished(QNetworkReply * netReply)
 		qDebug() << error; 
         } else {
 
-	    // check the db first
+	    // TODO: check the db first
+
+	    // get images from last.fm
 	    readLastFM(doc);
         }
     }

@@ -42,6 +42,7 @@ private:
     QNetworkReply * m_reply;
     QProgressBar * m_progress;
     QString m_tempStorageDir;
+    QString m_artist;
     QSize m_currentPhotoSize;
     QFileInfo m_currentFile;
     PhotoInfo m_currentPhotoInfo;
@@ -61,7 +62,7 @@ private:
     void updateDB();
     void cleanHistory(int now, int timeBack, int timeBackFactor);
     void clearHistory();
-    void fetchPhotos(const QString &artist);
+    void fetchPhotos();
     void prepareHomeDir();
     void resizeScreen();
 
