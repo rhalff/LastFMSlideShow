@@ -1,0 +1,3 @@
+- artist database from musicbrainz, to match the youtube titles, so it's more probable the right artist is found
+- implement mousehide, see videowidget.cpp in minitube
+- enable save to db

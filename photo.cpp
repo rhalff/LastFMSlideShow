@@ -21,6 +21,7 @@
 #include "photo.h"
 #include <QPaintEvent>
 #include <QPainter>
+#include <QImage>
 #include <QNetworkAccessManager>
 #include <QtCore>
 
@@ -53,6 +54,47 @@ PhotoView::~PhotoView()
 {
 }
 
+void PhotoView::paintEvent(QPaintEvent *event)
+{
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, false);
+
+    if (!m_imageList.isEmpty() > 0) {
+
+	// d->imagePaths[d->currentSlide]
+        QPixmap slide = QPixmap::fromImage(m_imageList.at(m_index), Qt::AutoColor);
+        QSize slideSize = slide.size();
+
+        QSize scaledSize = QSize(qMin(slideSize.width(), size().width()), qMin(slideSize.height(), size().height()));
+
+        if (slideSize != scaledSize)
+            slide = slide.scaled(scaledSize, Qt::KeepAspectRatio);
+
+        QRect pixmapRect(qMax( (size().width() - slide.width())/2, 0),
+                         qMax( (size().height() - slide.height())/2, 0),
+                         slide.width(),
+                         slide.height());
+
+        if (pixmapRect.top() > 0) {
+            // Fill in top & bottom rectangles:
+            painter.fillRect(0, 0, size().width(), pixmapRect.top(), Qt::black);
+            painter.fillRect(0, pixmapRect.bottom(), size().width(), size().height(), Qt::black);
+        }
+
+        if (pixmapRect.left() > 0) {
+            // Fill in left & right rectangles:
+            painter.fillRect(0, 0, pixmapRect.left(), size().height(), Qt::black);
+            painter.fillRect(pixmapRect.right(), 0, size().width(), size().height(), Qt::black);
+        }
+
+        painter.drawPixmap(pixmapRect, slide);
+
+    } else {
+        painter.fillRect(event->rect(), Qt::black);
+    }
+}
+
+/*
 
 void PhotoView::paintEvent ( QPaintEvent * event )
 {
@@ -71,7 +113,8 @@ void PhotoView::paintEvent ( QPaintEvent * event )
 	int y = 0; 
         painter.drawImage ( x,y,m_imageList.at ( m_index ) );
     }
-}
+} 
+*/
 
 void PhotoView::addPhoto ( const QString &url )
 {

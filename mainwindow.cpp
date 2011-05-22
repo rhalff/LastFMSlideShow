@@ -9,10 +9,10 @@
 #include "photo.h"
 #include "defs.h"
 
-MainWindow::MainWindow(QString &artist, QWidget *parent) : QMainWindow(parent)
+MainWindow::MainWindow(QString &artist, QWidget *parent) :
+   m_isFullscreen(false)
 {
 
-    m_isFullscreen = false;
     m_artist = (artist == "") ? "Jimi Hendrix" : artist;
 
     prepareHomeDir();
