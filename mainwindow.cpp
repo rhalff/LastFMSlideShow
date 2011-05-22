@@ -17,8 +17,6 @@ MainWindow::MainWindow(QString &artist, QWidget *parent) :
 
     prepareHomeDir();
 
-    resizeScreen();
-
     /* Progress bar to signal progress of RSS feed download and web page load. */
     m_progress = new QProgressBar;
     statusBar()->addPermanentWidget(m_progress);
@@ -43,22 +41,6 @@ MainWindow::MainWindow(QString &artist, QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-}
-
-void MainWindow::resizeScreen()
-{
-/*
-    QRect deskRect = QApplication::desktop()->screenGeometry(this);
-    m_deskX      = deskRect.x();
-    m_deskY      = deskRect.y();
-    m_deskWidth  = deskRect.width();
-    m_deskHeight = deskRect.height();
-    
-    move(m_deskX, m_deskY);
-    resize(m_deskWidth, m_deskHeight);
-*/
-    // TODO: set Background Color to black;
-
 }
 
 void MainWindow::prepareHomeDir()
@@ -119,8 +101,6 @@ void MainWindow::replyFinished(QNetworkReply * netReply)
         QDomDocument doc;
         QString error;
         if (!doc.setContent(str, false, &error)) {
-		// report an error somewhere..
-            //wv->setHtml(QString("<h1>Error</h1>") + error);
 		qDebug() << error; 
         } else {
 

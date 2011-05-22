@@ -64,7 +64,6 @@ private:
     void clearHistory();
     void fetchPhotos();
     void prepareHomeDir();
-    void resizeScreen();
 
 };
 
