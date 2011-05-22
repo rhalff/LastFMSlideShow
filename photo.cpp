@@ -184,3 +184,35 @@ void PhotoView::nextPhoto()
     m_changePhoto = true;
     m_timeLine->start();
 }
+
+void PhotoView::keyPressEvent(QKeyEvent* event)
+{
+    Q_UNUSED(event);
+    emit inputReceived();
+}
+
+void PhotoView::mouseMoveEvent(QMouseEvent* event)
+{
+    Q_UNUSED(event);
+    emit inputReceived();
+}
+
+void PhotoView::mousePressEvent(QMouseEvent* event)
+{
+    Q_UNUSED(event);
+    emit inputReceived();
+}
+
+void PhotoView::mouseReleaseEvent(QMouseEvent* event)
+{
+    Q_UNUSED(event);
+    emit inputReceived();
+}
+
+void PhotoView::showEvent(QShowEvent * event )
+{
+    Q_UNUSED(event);
+#ifndef QT_NO_CURSOR
+    setCursor(Qt::BlankCursor);
+#endif
+}

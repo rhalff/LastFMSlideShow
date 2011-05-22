@@ -32,19 +32,30 @@
 class PhotoView : public QWidget
 {
     Q_OBJECT
+
 public:
     PhotoView(QWidget * parent = 0);
 
     ~PhotoView();
     void addPhoto ( const QString &url );
+
 signals:
     void giveMeMore(int num);
+    void inputReceived();
+
 private slots:
     void replyFinished ( QNetworkReply * reply );
     void setValue(int i);
     void nextPhoto();
+
 protected:
     void paintEvent ( QPaintEvent * event );
+    void keyPressEvent(QKeyEvent* event);
+    void mouseMoveEvent(QMouseEvent* event);
+    void mousePressEvent(QMouseEvent* event);
+    void mouseReleaseEvent(QMouseEvent* event);
+    void showEvent(QShowEvent * event );
+
 private:
     QList<QImage> m_imageList;
     int m_index;
