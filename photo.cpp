@@ -1,6 +1,6 @@
 /******************************************************************************
- *   Copyright (C) 2009 by Evgeni Gordejev   *
- *   evgeni.gordejev@gmail.com   *
+ *   Copyright (C) 2009 by Evgeni Gordejev                                    *
+ *   evgeni.gordejev@gmail.com                                                *
  *                                                                            *
  *   This program is free software; you can redistribute it and/or modify     *
  *   it under the terms of the GNU Library Lesser General Public License as   *
@@ -54,18 +54,21 @@ PhotoView::~PhotoView()
 {
 }
 
+// http://apidocs.meego.com/1.2-preview/qt4/demos-embedded-fluidlauncher-slideshow-cpp.html
 void PhotoView::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
+    painter.setOpacity(m_opacity);
     painter.setRenderHint(QPainter::Antialiasing, false);
 
     if (!m_imageList.isEmpty() > 0) {
 
-	// d->imagePaths[d->currentSlide]
+	qDebug("PhotoView::PaintEvent(): Painting image %d", m_index);
         QPixmap slide = QPixmap::fromImage(m_imageList.at(m_index), Qt::AutoColor);
         QSize slideSize = slide.size();
 
         QSize scaledSize = QSize(qMin(slideSize.width(), size().width()), qMin(slideSize.height(), size().height()));
+	qDebug("scaledSize %dx%d", slideSize.width(), slideSize.height());
 
         if (slideSize != scaledSize)
             slide = slide.scaled(scaledSize, Qt::KeepAspectRatio);
@@ -74,6 +77,8 @@ void PhotoView::paintEvent(QPaintEvent *event)
                          qMax( (size().height() - slide.height())/2, 0),
                          slide.width(),
                          slide.height());
+
+	qDebug("dimensions: %dx%d", slide.width(), slide.height());
 
         if (pixmapRect.top() > 0) {
             // Fill in top & bottom rectangles:
@@ -94,28 +99,6 @@ void PhotoView::paintEvent(QPaintEvent *event)
     }
 }
 
-/*
-
-void PhotoView::paintEvent ( QPaintEvent * event )
-{
-    //painting widget content
-    QPainter painter ( this );
-    painter.fillRect ( event->rect(),QColor ( 200,200,200 ) );
-    if ( !m_imageList.isEmpty() )
-    {
-        painter.setOpacity(m_opacity);
-        QSize imageSize = m_imageList.at ( m_index ).size();
-
-        //adjusting photo to the center
-//        int x = WIDGET_SIZE_HALF - (imageSize.width()/2);
-//        int y = WIDGET_SIZE_HALF - (imageSize.height()/2);
-	int x = 0; 
-	int y = 0; 
-        painter.drawImage ( x,y,m_imageList.at ( m_index ) );
-    }
-} 
-*/
-
 void PhotoView::addPhoto ( const QString &url )
 {
     //setting photo into request queue
@@ -132,8 +115,8 @@ void PhotoView::replyFinished ( QNetworkReply * reply )
     //getting image from received binary data
     if ( image.loadFromData ( reply->readAll() ) )
     {
-	qDebug() << "Add image to m_imageList";
         m_imageList.append ( image );
+	qDebug("PhotoView::replyFinished: Added image %d, size: %dx%d", m_imageList.size(), image.width(), image.height());
     }
     update();
 }
@@ -142,15 +125,19 @@ void PhotoView::setValue(int i)
 {
     //change photo in the middle of fading animation
     if(i > 50 && m_changePhoto){
+	qDebug("PhotoView::setValue(): change Photo");
         m_index++;
         m_changePhoto = !m_changePhoto;
     }
 
     //fadeout <--> fadein
-    if(i < 50)
+    if(i < 50) {
         m_opacity = (50.0-(qreal)i)/50.0;
-    else
+    } else {
         m_opacity = ((qreal)i-50.0)/50.0;
+    }
+
+    qDebug("PhotoView::setValue(): opacity changed to %f", m_opacity);
 
     update();
 }
