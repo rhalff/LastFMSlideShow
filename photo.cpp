@@ -34,41 +34,100 @@ PhotoView::PhotoView ( QWidget * parent )
     : QWidget ( parent ),
     m_index ( 0 )
 {
-    //timer used to change photos
-    m_timer = new QTimer ( this );
-    connect ( m_timer, SIGNAL ( timeout() ), this, SLOT ( nextPhoto() ) );
-    m_timer->start ( SLIDESHOW_DURATION );
-
-    //timeline used for fading effect
-    m_timeLine = new QTimeLine(FADE_DURATION, this);
-    m_timeLine->setFrameRange(0, 100);
-    m_timeLine->setCurveShape(QTimeLine::LinearCurve);
-    connect(m_timeLine, SIGNAL(frameChanged(int)), this, SLOT(setValue(int)));
-
+    qDebug("PhotoView::PhotoView");
     m_opacity = 1.0;
-    //this->setFixedSize ( WIDGET_SIZE,WIDGET_SIZE );
+}
+
+void PhotoView::initTimeLine()
+{
+    qDebug("PhotoView::initTimeLine");
+
+    //timeline used to play effects and change photos
+    m_timeLine = new QTimeLine(SLIDESHOW_DURATION, this);
+    m_timeLine->setFrameRange(0, SLIDESHOW_DURATION); // set frame range
+
+    /**
+     * Constant                      Value   Description
+     * QTimeLine::EaseInCurve        0       The value starts growing slowly, then increases in speed.
+     * QTimeLine::EaseOutCurve       1       The value starts growing steadily, then ends slowly.
+     * QTimeLine::EaseInOutCurve     2       The value starts growing slowly, the runs steadily, then grows slowly again.
+     * QTimeLine::LinearCurve        3       The value grows linearly (e.g., if the duration is 1000 ms, the value at time 500 ms is 0.5).
+     * QTimeLine::SineCurve          4       The value grows sinusoidally.
+     **/
+    m_timeLine->setCurveShape(QTimeLine::LinearCurve);
+
+    connect(m_timeLine, SIGNAL(frameChanged(int)), this, SLOT(setValue(int)));
+    connect(m_timeLine, SIGNAL(finished()), this, SLOT(nextPhoto()));
+
 }
 
 
 PhotoView::~PhotoView()
 {
+    qDebug("PhotoView destructed");
 }
+
+/**
+*
+* This function is called to start the slideshow.
+*
+* We will start the slideshow after 1 image is received.
+*
+* requestPhoto() will start the network request for the images.
+*
+*
+*/
+void PhotoView::start()
+{
+    initTimeLine();
+
+    connect(this, SIGNAL(photoAdded()), this, SLOT(controlTimeLine()));
+
+    qDebug("PhotoView::start()");
+    if(!m_urlList.isEmpty()) {
+	for(int i = 0; i < m_urlList.size(); i++) {
+	  // start downloading the first photo
+	  requestPhoto(m_urlList[i]);
+	}
+    }
+
+}
+
+/**
+*
+* This will run during _any_ update.
+*
+* So not only when called from within this class, but also when windows are moving around etc.
+* Many things can trigger an update event, outside of the context of this slideshow...
+*
+* Actually it needs to be repainted when the paintEvent occurs..
+* Which means inside this event nothing else should be going on than repainting what should be the current state.
+*
+*/
 
 // http://apidocs.meego.com/1.2-preview/qt4/demos-embedded-fluidlauncher-slideshow-cpp.html
 void PhotoView::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
+    // todo make this available to the effect
     painter.setOpacity(m_opacity);
     painter.setRenderHint(QPainter::Antialiasing, false);
+    painter.fillRect(event->rect(), Qt::black);
 
-    if (!m_imageList.isEmpty() > 0) {
+    if((m_index + 1) > m_imageList.size()) {
+	qDebug("refusing to draw an out of range image: %i %i", m_index, m_imageList.size());
+	return;
+    }
 
-	qDebug("PhotoView::PaintEvent(): Painting image %d", m_index);
+    if (!m_imageList.isEmpty()) {
+
+        //qDebug("PhotoView::PaintEvent(): Painting image %d", m_index);
         QPixmap slide = QPixmap::fromImage(m_imageList.at(m_index), Qt::AutoColor);
+
         QSize slideSize = slide.size();
 
         QSize scaledSize = QSize(qMin(slideSize.width(), size().width()), qMin(slideSize.height(), size().height()));
-	qDebug("scaledSize %dx%d", slideSize.width(), slideSize.height());
+        //qDebug("scaledSize %dx%d", slideSize.width(), slideSize.height());
 
         if (slideSize != scaledSize)
             slide = slide.scaled(scaledSize, Qt::KeepAspectRatio);
@@ -78,81 +137,118 @@ void PhotoView::paintEvent(QPaintEvent *event)
                          slide.width(),
                          slide.height());
 
-	qDebug("dimensions: %dx%d", slide.width(), slide.height());
-
-        if (pixmapRect.top() > 0) {
-            // Fill in top & bottom rectangles:
-            painter.fillRect(0, 0, size().width(), pixmapRect.top(), Qt::black);
-            painter.fillRect(0, pixmapRect.bottom(), size().width(), size().height(), Qt::black);
-        }
-
-        if (pixmapRect.left() > 0) {
-            // Fill in left & right rectangles:
-            painter.fillRect(0, 0, pixmapRect.left(), size().height(), Qt::black);
-            painter.fillRect(pixmapRect.right(), 0, size().width(), size().height(), Qt::black);
-        }
-
+        //qDebug("dimensions: %dx%d", slide.width(), slide.height());
         painter.drawPixmap(pixmapRect, slide);
 
     } else {
-        painter.fillRect(event->rect(), Qt::black);
+        qDebug("PhotoView::PaintEvent(): Paint event but imagelist is empty...");
+	painter.fillRect(event->rect(), Qt::black);
     }
 }
 
-void PhotoView::addPhoto ( const QString &url )
-{
-    //setting photo into request queue
-    QNetworkAccessManager *manager = new QNetworkAccessManager ( this );
-    connect ( manager, SIGNAL ( finished ( QNetworkReply* ) ),
-              this, SLOT ( replyFinished ( QNetworkReply* ) ) );
+/**
+*
+* First we add urls to the photoView.
+*
+*/
 
-    manager->get ( QNetworkRequest ( QUrl ( url ) ) );
+void PhotoView::addPhotoUrl( const QUrl &url )
+{
+	m_urlList.append(url);
+
+	qDebug() << "PhotoView::addPhotoUrl()";
+
 }
 
-void PhotoView::replyFinished ( QNetworkReply * reply )
+/**
+*
+* Downloads a new photo 
+*
+*/
+
+void PhotoView::requestPhoto ( const QUrl &url )
+{
+    qDebug("PhotoView::requestPhoto()");
+    //setting photo into request queue
+    QNetworkAccessManager *manager = new QNetworkAccessManager ( this );
+    connect ( manager, SIGNAL ( finished ( QNetworkReply* ) ), this, SLOT ( addPhoto ( QNetworkReply* ) ) );
+
+    manager->get(QNetworkRequest(url));
+}
+
+/**
+*
+* Photo data is received, add it to the m_imageList as a QImage
+*
+*/
+void PhotoView::addPhoto ( QNetworkReply * reply )
 {
     QImage image;
     //getting image from received binary data
     if ( image.loadFromData ( reply->readAll() ) )
     {
         m_imageList.append ( image );
-	qDebug("PhotoView::replyFinished: Added image %d, size: %dx%d", m_imageList.size(), image.width(), image.height());
+	qDebug("PhotoView::addPhoto: Added image %d,(size: %dx%d", m_imageList.size(), image.width(), image.height());
+    } else {
+        qDebug("PhotoView::addPhoto() failed to load image data");
     }
-    update();
+
+    emit photoAdded();
+
 }
 
+/**
+*
+* This function is run during the frameChanged event of the timeline.
+*
+* The range defined currently is 1000.
+*
+* After 50 frames the photo will change.
+*
+* Right now the only effect is changing the opacity value.
+*
+* This eventually will be delegated to one of the effect classes.
+*
+*/
 void PhotoView::setValue(int i)
 {
     //change photo in the middle of fading animation
-    if(i > 50 && m_changePhoto){
+    if(i > 500 && m_changePhoto){
 	qDebug("PhotoView::setValue(): change Photo");
         m_index++;
-        m_changePhoto = !m_changePhoto;
+	//rolling slideshow to beginning if it reaches the end
+	if ( (m_index + 1) == m_imageList.size() ) {
+	  qDebug() << "rolling slideshow to beginning";
+	  m_index = 0;
+	}
+        m_changePhoto = false;
     }
+
+    int pause = 200;
 
     //fadeout <--> fadein
-    if(i < 50) {
-        m_opacity = (50.0-(qreal)i)/50.0;
-    } else {
-        m_opacity = ((qreal)i-50.0)/50.0;
+    if(i < (500 - pause)) {
+        m_opacity = (500.0-(qreal)i)/500.0;
+    } else if(i > (500 + pause)) {
+        m_opacity = ((qreal)i-500.0)/500.0;
     }
 
-    qDebug("PhotoView::setValue(): opacity changed to %f", m_opacity);
+    //qDebug("PhotoView::setValue(): opacity changed to %f", m_opacity);
 
+    // update the photoView, which will dispatch frameChanged event, which will call setValue etc..
     update();
 }
 
+/**
+*
+* nextPhoto is called everytime the timer times out.
+*
+*/
 void PhotoView::nextPhoto()
 {
     if ( m_imageList.isEmpty() ) {
         qDebug() << "m_imageList is empty";
         return;
-    }
-
-    //rolling slideshow to beginning if it reaches the end
-    if ( m_index == m_imageList.size() ) {
-        qDebug() << "rolling slideshow to beginning";
-        m_index = 0;
     }
 
     //slideshow is in the middle
@@ -169,7 +265,30 @@ void PhotoView::nextPhoto()
     }
 
     m_changePhoto = true;
+
+    // (re-)start the timeline for effects
+    qDebug("Restarting timeline");
     m_timeLine->start();
+}
+
+/**
+*
+* Runs when a photo is added to the list.
+* 
+* - (re)-starts the timeline if it's not running
+*
+*/
+void PhotoView::controlTimeLine()
+{
+
+    qDebug("PhotoView::controlTimeLine()");
+
+    if(m_timeLine->state() == QTimeLine::NotRunning) {
+	    m_timeLine->start();
+	    qDebug("PhotoView::controlTimeLine(): start timeline");
+    }
+
+
 }
 
 void PhotoView::keyPressEvent(QKeyEvent* event)

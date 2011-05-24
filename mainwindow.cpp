@@ -9,7 +9,7 @@
 #include "photo.h"
 #include "defs.h"
 
-MainWindow::MainWindow(QString &artist, QWidget *parent) :
+MainWindow::MainWindow(QString &artist) :
    m_isFullscreen(false)
 {
 
@@ -22,19 +22,21 @@ MainWindow::MainWindow(QString &artist, QWidget *parent) :
     statusBar()->addPermanentWidget(m_progress);
 
     m_photoView = new PhotoView();
-// TODO: reimplement this getmore function 
-//    connect ( m_photoView,SIGNAL ( giveMeMore(int) ),this,SLOT ( getPhotos(int) ) );
+    // TODO: reimplement this getmore function 
+    //    connect ( m_photoView,SIGNAL ( giveMeMore(int) ),this,SLOT ( getPhotos(int) ) );
     this->setCentralWidget ( m_photoView );
 
+    // set default size (not really necessary)
     resize(800,600);
 
-//    getPhotos(MAX_PHOTOS);
+    // getPhotos(MAX_PHOTOS);
 
     /* Set up the network manager. */
     manager = new QNetworkAccessManager(this);
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
 
     // fetch the rss feed from last.fm
+    qDebug("Invoking fetchPhotos()");
     fetchPhotos();
 
 }
@@ -43,6 +45,11 @@ MainWindow::~MainWindow()
 {
 }
 
+/**
+*
+* Create the home directory, if it doesn't exist yet
+*
+*/
 void MainWindow::prepareHomeDir()
 {
 
@@ -56,6 +63,11 @@ void MainWindow::prepareHomeDir()
 
 }
 
+/**
+*
+* Show download progress for the feed, not sure If I want to keep this.
+*
+*/
 void MainWindow::downloadProgress(qint64 bytes, qint64 bytesTotal)
 {
     if (bytesTotal == -1) {
@@ -69,6 +81,11 @@ void MainWindow::downloadProgress(qint64 bytes, qint64 bytesTotal)
     }
 }
 
+/**
+*
+* Fetch the photo's from last.fm using their xml feed
+*
+*/
 void MainWindow::fetchPhotos() {
 
     // check DB for photos
@@ -81,37 +98,58 @@ void MainWindow::fetchPhotos() {
 
 }
 
+/**
+*
+* Runs when the feed has finished downloading.
+*
+* Checks whether we have a valid XML document and passes it on to readLastFM
+*
+*/
 void MainWindow::replyFinished(QNetworkReply * netReply)
 {
     QString str (netReply->readAll());
 
     /* If we are redirected, try again. TODO: Limit redirection count. */
+/*
     QVariant vt = netReply->attribute(QNetworkRequest::RedirectionTargetAttribute);
+*/
 
     qDebug() << "network reply finished";
 
     delete m_reply;
-
+/*
     if (!vt.isNull()) {
         qDebug() << "Redirected to:" << vt.toUrl().toString();
         m_reply = manager->get(QNetworkRequest(vt.toUrl()));
         connect(m_reply, SIGNAL(downloadProgress(qint64,qint64)), this, SLOT(downloadProgress(qint64,qint64)));
     } else {
-        /* We have something. */
-        QDomDocument doc;
-        QString error;
-        if (!doc.setContent(str, false, &error)) {
-		qDebug() << error; 
-        } else {
+*/
+    /* We have something. */
+    QDomDocument doc;
+    QString error;
+    if (!doc.setContent(str, false, &error)) {
+	    qDebug() << error; 
+    } else {
 
 	    // TODO: check the db first
 
 	    // get images from last.fm
 	    readLastFM(doc);
-        }
     }
+ //   }
 }
 
+/**
+*
+* Will parse the xml from last.fm
+*
+* Only extralarge and original images are considered
+* 
+* Extralarge is actually allready too small, but it will do.
+*
+* photo's are added to the photoView instance (m_photoView);
+*
+*/
 void MainWindow::readLastFM(const QDomDocument &doc) const { 
 
 	QDomElement docElem = doc.documentElement();
@@ -129,19 +167,18 @@ void MainWindow::readLastFM(const QDomDocument &doc) const {
 		QDomNodeList sizeList = e.elementsByTagName("size");
 
 		if(!sizeList.length()) {
-			qDebug() << "No photos found";
+			qDebug("No photos found");
 		} else {
-			qDebug() << "Found some photo's";
+
+			QDomNode sizeNode;
+			QDomElement sizeEl;
 			for (uint j = 0; j < sizeList.length(); j++) {
 
-				QDomNode sizeNode  = sizeList.item(j);
-				QDomElement sizeEl = sizeNode.toElement();
-
-				qDebug() << sizeEl.attribute("name");
+				sizeNode  = sizeList.item(j);
+				sizeEl = sizeNode.toElement();
 
 				// try to get a nice high res photo of our favorite artist
 				if(sizeEl.attribute("name") == "original") {
-					qDebug() << "Found an highres original! yeay";
 					artist_image_url = sizeEl.text();
 					break;
 				} 
@@ -152,12 +189,13 @@ void MainWindow::readLastFM(const QDomDocument &doc) const {
 					break;
 				}
 
+				// more tiny is useless.
+
 			}
 
-			// more tiny is useless.
-			m_photoView->addPhoto ( artist_image_url );
+			//m_photoView->requestPhoto ( artist_image_url );
+			m_photoView->addPhotoUrl ( QUrl(artist_image_url) );
 
-			qDebug() << "m_photoView->addPhoto: " << artist_image_url;
 		}
 
 		if(i == 14) {
@@ -166,106 +204,19 @@ void MainWindow::readLastFM(const QDomDocument &doc) const {
 
 	}
 
+	m_photoView->start();
+
 }
 
-void MainWindow::initializeDB()
-{
-  qDebug() << "Application::initializeDB()";
-
-  db = QSqlDatabase::addDatabase("QSQLITE");
-  QDir(m_tempStorageDir).mkdir("thumbs");
-  db.setDatabaseName(m_tempStorageDir + "/thumbs/LastFmSlideshow.db");
-  if (db.open()) {
-    QSqlQuery query(db);
-
-    query.exec("PRAGMA journal_mode = OFF");
-
-    if (query.exec("select * from sqlite_master where name = 'photoHistory'"))
-    {
-
-      QString createTable = "create table photoHistory (timestamp integer primary key, url text, artist text, title text, description text, location text, sourceUrl text, width integer,height integer)";
-
-      if (!query.next() && (!query.exec(createTable))) {
-        db.close();
-        qDebug() << "Application::Application() cannot create photoHistory table";
-      }
-    }
-  } else {
-    qDebug() << "Application::Application() db connection failed";
-  }
-}
-
-void MainWindow::updateDB()
-{
-
-  QByteArray cTags;
-  int now = QDateTime::currentDateTime().toTime_t();
-
-  qDebug() << "Application::updateDB()";
-
-  // TODO: cleanHistory reimplement later ( or not )
-  //cleanHistory(now,settings.value(MAIN_SECTION).value(HISTORY_TIME_LIMIT).toInt(), settings.value(MAIN_SECTION).value(HISTORY_TIME_LIMIT_FACTOR).toInt());
-
-  if (m_currentPhotoInfo.searchString.isEmpty()) { return; }
-
-  // TODO: reimplement history limit, in our case photoUrl is never empty at this stage
-  //if (db.isOpen() && !engines.at(currentEngineIndex)->photoUrl().isEmpty() && settings.value(MAIN_SECTION).value(HISTORY_TIME_LIMIT).toInt())
-  if (db.isOpen()) {
-
-    QSqlQuery query(db);
-
-    QString insert = "insert into photoHistory (timestamp, url, artist, title, description, location, sourceUrl, width, height) values (:timestamp, :url, :title, :description, :location, :sourceUrl, :width, :height)";
-
-    query.prepare(insert);
-
-    query.bindValue(":timestamp",now);
-    query.bindValue(":url", ""); // if needed pass it through m_currentPhotoInfo or something
-    query.bindValue(":artist",m_currentPhotoInfo.searchString.toLower());
-    query.bindValue(":title",m_currentPhotoInfo.title);
-    query.bindValue(":owner",m_currentPhotoInfo.owner);
-    query.bindValue(":description",m_currentPhotoInfo.description);
-    query.bindValue(":location",m_currentPhotoInfo.location);
-    query.bindValue(":sourceUrl",m_currentPhotoInfo.sourceUrl.toString());
-    query.bindValue(":size",m_currentFile.size());
-    query.bindValue(":width",m_currentPhotoSize.width());
-    query.bindValue(":height",m_currentPhotoSize.height());
-
-    if (query.exec()) {
-      QImage thumb(m_currentFile.absoluteFilePath());
-
-      if (thumb.width() > thumb.height()) {
-	      thumb = thumb.scaledToWidth(100,Qt::SmoothTransformation);
-      } else {
-	      thumb = thumb.scaledToHeight(100,Qt::SmoothTransformation);
-      }
-
-      // TODO: create dirs based on artist name
-      thumb.save(m_tempStorageDir + "/thumbs/" + QString::number(now) + ".png","png");
-    } else {
-      qDebug() << "Application::updateDB() insert error:" << query.lastError().text();
-    }
-  }
-}
-
-void MainWindow::clearHistory()
-{
-  QSqlQuery query(db);
-  QDirIterator dirIterator(m_tempStorageDir + "/thumbs",
-                           QStringList() << "*.png",
-                           QDir::Files);
-
-  qDebug() << "Application::clearHistory()";
-
-  if (!query.exec("delete from photoHistory") || !query.exec("vacuum")) {
-    qDebug() << "Application::clearHistory() delete error:" << query.lastError().text();
-  }
-
-  while (dirIterator.hasNext()) {
-    dirIterator.next();
-    QFile::remove(dirIterator.filePath());
-  }
-}
-
+/**
+*
+* KeyPress Event checking to enable fullscreen toggle 
+*
+* F11 can be used to go fullscreen 
+*
+* To leave fullscreen F11 or ESC can be used
+*
+*/
 void MainWindow::keyPressEvent(QKeyEvent *event)
 {
   switch(event->key())
@@ -293,4 +244,3 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     break;
   }
 }
-

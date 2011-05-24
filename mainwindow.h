@@ -26,7 +26,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QString &artist, QWidget* parent = 0);
+    MainWindow(QString &artist);
     ~MainWindow();
 
 public slots:
@@ -57,9 +57,9 @@ private:
     void readLastFM(const QDomDocument& doc) const;
 
     QSqlDatabase db;
-    void initializeDB();
-    void updateDBVersion();
-    void updateDB();
+//    void initializeDB();
+//    void updateDBVersion();
+//    void updateDB();
     void cleanHistory(int now, int timeBack, int timeBackFactor);
     void clearHistory();
     void fetchPhotos();
